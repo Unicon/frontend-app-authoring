@@ -1,6 +1,6 @@
 import { useIntl } from '@edx/frontend-platform/i18n';
 import { CheckboxFilter } from '@openedx/paragon';
-import { AgreementGated } from '@src/constants';
+import { AgreementGated, UPLOAD_FILE_MAX_SIZE } from '@src/constants';
 import {
   addAssetFile,
   deleteAssetFile,
@@ -28,7 +28,6 @@ import { getFileSizeToClosestByte } from '@src/utils';
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
-import { UPLOAD_FILE_MAX_SIZE } from '@src/constants';
 
 export const CourseFilesTable = () => {
   const intl = useIntl();
