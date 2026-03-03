@@ -56,7 +56,7 @@ const messages = defineMessages({
   },
   manageTagsButton: {
     id: 'course-authoring.content-tags-drawer.button.manage',
-    defaultMessage: 'Manage tags (Unicon smoke)',
+    defaultMessage: 'Manage tags',
     description: 'Label in the button that opens the drawer to edit content tags',
   },
   tagsSidebarTitle: {
