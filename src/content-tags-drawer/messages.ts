@@ -3,7 +3,7 @@ import { defineMessages } from '@edx/frontend-platform/i18n';
 const messages = defineMessages({
   headerSubtitle: {
     id: 'course-authoring.content-tags-drawer.header.subtitle',
-    defaultMessage: 'Unicon Taxonomies',
+    defaultMessage: 'Manage tags',
   },
   addTagsButtonText: {
     id: 'course-authoring.content-tags-drawer.collapsible.add-tags.button',
@@ -56,7 +56,7 @@ const messages = defineMessages({
   },
   manageTagsButton: {
     id: 'course-authoring.content-tags-drawer.button.manage',
-    defaultMessage: 'Unicon Taxonomies',
+    defaultMessage: 'Manage tags',
     description: 'Label in the button that opens the drawer to edit content tags',
   },
   tagsSidebarTitle: {
