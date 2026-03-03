@@ -3,7 +3,7 @@ import { defineMessages } from '@edx/frontend-platform/i18n';
 const messages = defineMessages({
   headerTitle: {
     id: 'course-authoring.taxonomy-list.header.title',
-    defaultMessage: 'Taxonomies',
+    defaultMessage: 'Unicon Taxonomies',
   },
   downloadTemplateButtonLabel: {
     id: 'course-authoring.taxonomy-list.button.download-template.label',
