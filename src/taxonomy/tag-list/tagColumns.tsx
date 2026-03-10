@@ -1,17 +1,13 @@
-import React from 'react';
 import {
   Button,
   Icon,
   IconButton,
   IconButtonWithTooltip,
   Dropdown,
-  Spinner,
 } from '@openedx/paragon';
 import {
   AddCircle,
   MoreVert,
-  ExpandMore,
-  ExpandLess,
 } from '@openedx/paragon/icons';
 import type { Row } from '@tanstack/react-table';
 import type { IntlShape } from 'react-intl';
@@ -22,7 +18,7 @@ import type {
   TreeColumnDef,
   TreeRowData,
 } from '../tree-table/types';
-import { EditableCell } from '../tree-table';
+import OptionalExpandLink from './OptionalExpandLink';
 
 interface TagListRowData extends TreeRowData {
   depth: number;
@@ -38,13 +34,11 @@ const asTagListRowData = (row: Row<TreeRowData>): TagListRowData => (
 
 interface GetColumnsArgs {
   intl: IntlShape;
-  handleCreateTag: (value: string, parentTagValue?: string) => void;
   setIsCreatingTopTag: (isCreating: boolean) => void;
   setCreatingParentId: (id: RowId | null) => void;
   handleUpdateTag: (value: string, originalValue: string) => void;
   setEditingRowId: (id: RowId | null) => void;
   onStartDraft: () => void;
-  activeActionMenuRowId: RowId | null;
   setActiveActionMenuRowId: (id: RowId | null) => void;
   hasOpenDraft: boolean;
   draftError: string;
@@ -54,75 +48,28 @@ interface GetColumnsArgs {
   creatingParentId: RowId | null;
 }
 
-const OptionalExpandLink = ({ row }: { row: Row<TreeRowData> }) => (
-  <IconButton
-    src={row.getIsExpanded() ? ExpandLess : ExpandMore}
-    onClick={row.getToggleExpandedHandler()}
-    alt="Show Subtags"
-    size="sm"
-    style={{ visibility: row.getCanExpand() ? 'visible' : 'hidden' }}
-  />
-);
-
 function getColumns({
   intl,
-  handleCreateTag,
   setIsCreatingTopTag,
   setCreatingParentId,
-  handleUpdateTag,
   setEditingRowId,
   onStartDraft,
-  activeActionMenuRowId,
   setActiveActionMenuRowId,
   hasOpenDraft,
-  draftError,
   setDraftError,
-  isSavingDraft,
   maxDepth,
   creatingParentId,
 }: GetColumnsArgs): TreeColumnDef[] {
   const canAddSubtag = (row: Row<TreeRowData>) => row.depth + 1 < maxDepth;
+  const draftInProgressHintId = 'tag-list-draft-in-progress-hint';
 
   return [
     {
       header: intl.formatMessage(messages.tagListColumnValueHeader),
-      cell: ({ row, column, table }) => {
+      cell: ({ row }) => {
         const {
-          isNew,
-          isEditing,
           value,
         } = asTagListRowData(row);
-
-        if (isNew) {
-          return (
-            <EditableCell
-              errorMessage={draftError}
-              isSaving={isSavingDraft}
-              onChange={(e) => {
-                table.options.meta?.updateData(row.id, column.id, e.target.value);
-              }}
-              // onSave={(newValue) => handleCreateTag(newValue)}
-              // onCancel={() => {
-              //   setDraftError('');
-              //   setIsCreatingTopTag(false);
-              // }}
-            />
-          );
-        }
-
-        if (isEditing) {
-          return (
-            <EditableCell
-              initialValue={value}
-              errorMessage={draftError}
-              onSave={(newVal) => handleUpdateTag(newVal, value)}
-              onCancel={() => {
-                setDraftError('');
-                setEditingRowId(null);
-              }}
-            />
-          );
-        }
 
         return (
           <span className="d-flex align-items-center gap-2">
@@ -138,9 +85,9 @@ function getColumns({
         <div className="d-flex justify-content-end">
           <IconButtonWithTooltip
             tooltipPlacement="top"
-            tooltipContent={<div>Create a new tag</div>}
+            tooltipContent={<div>{intl.formatMessage(messages.createNewTagTooltip)}</div>}
             src={AddCircle}
-            alt="Create Tag"
+            alt={intl.formatMessage(messages.createTagButtonLabel)}
             size="inline"
             onClick={() => {
               onStartDraft();
@@ -150,10 +97,11 @@ function getColumns({
               setActiveActionMenuRowId(null);
             }}
             disabled={hasOpenDraft}
+            aria-describedby={hasOpenDraft ? draftInProgressHintId : undefined}
           />
         </div>
       ),
-      cell: ({ row, table }) => {
+      cell: ({ row }) => {
         const rowData = asTagListRowData(row);
 
         if (rowData.isNew || rowData.isEditing || !canAddSubtag(row)) {
@@ -175,40 +123,24 @@ function getColumns({
           <div className="d-flex align-items-center justify-content-end gap-2">
             <Dropdown>
               <Dropdown.Toggle
-                id={`dropdown-toggle-for-tag-${rowData.value}`}
+                id={`dropdown-toggle-for-tag-${rowData.id}`}
                 as={IconButton}
                 src={MoreVert}
                 iconAs={Icon}
                 variant="primary"
-                aria-label={`More actions for tag ${rowData.value}`}
+                aria-label={intl.formatMessage(messages.moreActionsForTag, { tagName: rowData.value })}
                 size="sm"
               />
               <Dropdown.Menu>
-                <Dropdown.Item as={Button} onClick={startSubtagDraft} disabled={disableAddSubtag}>
+                <Dropdown.Item
+                  as={Button}
+                  onClick={startSubtagDraft}
+                  disabled={disableAddSubtag}
+                >
                   {intl.formatMessage(messages.addSubtag)}
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown>
-            {/* <IconButton
-              src={MoreVert}
-              alt="Actions"
-              iconAs={Icon}
-              onClick={() => {
-                setActiveActionMenuRowId(isMenuOpen ? null : rowData.id);
-              }}
-              disabled={disableAddSubtag}
-              size="sm"
-            />
-            {isMenuOpen && canAddSubtag(row) && (
-              <Button
-                variant="tertiary"
-                size="sm"
-                onClick={startSubtagDraft}
-                disabled={disableAddSubtag}
-              >
-                {intl.formatMessage(messages.addSubtag)}
-              </Button>
-            )} */}
           </div>
         );
       },

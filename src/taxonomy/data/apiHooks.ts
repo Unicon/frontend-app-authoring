@@ -180,11 +180,12 @@ export const useImportPlan = (taxonomyId: number, file: File | null) => useQuery
  * Use the list of tags in a taxonomy.
  */
 export const useTagListData = (taxonomyId: number, options: QueryOptions) => {
-  const { pageIndex, pageSize, enabled = true } = options;
+  const { pageIndex, pageSize, enabled = true } = options; // eslint-disable-line
   return useQuery({
-    queryKey: taxonomyQueryKeys.taxonomyTagListPage(taxonomyId, pageIndex, pageSize),
+    // queryKey: taxonomyQueryKeys.taxonomyTagListPage(taxonomyId, pageIndex, pageSize),
+    queryKey: taxonomyQueryKeys.taxonomyTagList(taxonomyId), // For now, ignore pagination in the query key.
     queryFn: async () => {
-      const { data } = await getAuthenticatedHttpClient().get(apiUrls.tagList(taxonomyId, pageIndex, pageSize, 1000));
+      const { data } = await getAuthenticatedHttpClient().get(apiUrls.tagList(taxonomyId, null, null, 1000));
       return camelCaseObject(data) as TagListData;
     },
     enabled,
@@ -204,7 +205,7 @@ export const useSubTags = (taxonomyId: number, parentTagValue: string) => useQue
   },
 });
 
-export const useCreateTag = (taxonomyId) => {
+export const useCreateTag = (taxonomyId: number) => {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -226,4 +227,4 @@ export const useCreateTag = (taxonomyId) => {
       queryClient.invalidateQueries({ queryKey: taxonomyQueryKeys.taxonomyMetadata(taxonomyId) });
     },
   });
-}
+};

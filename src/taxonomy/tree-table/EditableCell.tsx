@@ -1,27 +1,47 @@
-import React, { useState, useEffect } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useId,
+  useRef,
+} from 'react';
 
-import { Button, Form, Spinner } from '@openedx/paragon';
+import { Form } from '@openedx/paragon';
+import { useIntl } from '@edx/frontend-platform/i18n';
+import messages from './messages';
+import OptionalExpandLink from '../tag-list/OptionalExpandLink';
 
 interface EditableCellProps {
   initialValue?: string;
-  onSave?: (value: string) => void;
-  onCancel?: () => void;
+  onKeyDown?: (event: React.KeyboardEvent<HTMLInputElement>) => void;
   onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
   errorMessage?: string;
   isSaving?: boolean;
+  autoFocus?: boolean;
   getInlineValidationMessage?: (value: string) => string;
 }
 
 const EditableCell = ({
   initialValue = '',
-  onSave = () => {},
-  onCancel = () => {},
+  onKeyDown,
   onChange = () => {},
   errorMessage = '',
   isSaving = false,
   getInlineValidationMessage = () => '',
+  autoFocus = false,
 }: EditableCellProps) => {
   const [value, setValue] = useState<string>(initialValue);
+  const inputId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const intl = useIntl();
+
+  useEffect(() => {
+    if (autoFocus) {
+      if (inputRef.current) {
+        inputRef.current.focus();
+        inputRef.current.select();
+      }
+    }
+  }, [autoFocus]);
 
   useEffect(() => {
     setValue(initialValue);
@@ -29,61 +49,36 @@ const EditableCell = ({
 
   const validationMessage = getInlineValidationMessage(value);
   const effectiveErrorMessage = errorMessage || validationMessage;
-  const isSaveDisabled = Boolean(validationMessage) || isSaving;
-
-  const handleSave = () => {
-    if (!isSaveDisabled) {
-      onSave(value);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleSave();
-    } else if (e.key === 'Escape') {
-      onCancel();
-    }
-  };
+  const errorMessageId = `${inputId}-error`;
 
   return (
     <span className="d-flex align-items-start">
+      <OptionalExpandLink forceHide />
       <span className="mr-2">
-        <Form.Group controlId="editable-cell-input" className="mb-0">
+        <Form.Group controlId={inputId} className="mb-0">
           <Form.Control
+            ref={inputRef}
             value={value}
             onChange={(e) => {
               setValue(e.target.value);
               onChange(e);
             }}
-            onKeyDown={handleKeyDown}
+            size="sm"
+            onKeyDown={onKeyDown}
             onClick={(e) => e.stopPropagation()}
-            floatingLabel="Type tag name"
+            floatingLabel={intl.formatMessage(messages.editTagInputLabel)}
+            disabled={isSaving}
+            autoComplete="off"
+            isInvalid={!!effectiveErrorMessage}
+            aria-describedby={effectiveErrorMessage ? errorMessageId : undefined}
           />
           {effectiveErrorMessage && (
-            <div className="text-danger small mt-1">{effectiveErrorMessage}</div>
+            <div id={errorMessageId} role="alert" aria-live="polite" className="text-danger small mt-1">
+              {effectiveErrorMessage}
+            </div>
           )}
         </Form.Group>
       </span>
-      {/* <span className="mr-2">
-        <Button variant="secondary" size="sm" onClick={onCancel} disabled={isSaving}>
-          Cancel
-        </Button>
-      </span>
-      <span className="mr-2">
-        <Button variant="primary" size="sm" onClick={handleSave} disabled={isSaveDisabled}>
-          Save
-        </Button>
-      </span>
-      {isSaving && (
-        <Spinner
-          animation="border"
-          role="status"
-          variant="primary"
-          size="sm"
-          screenReaderText="Saving..."
-        />
-      )} */}
     </span>
   );
 };

@@ -1,21 +1,22 @@
-import { useReducer, useEffect } from 'react';
+import { useReducer } from 'react';
 import { useIntl } from '@edx/frontend-platform/i18n';
 
-import messages from './messages';
-import { useTagListData, useCreateTag } from '../data/apiHooks';
+import { useCreateTag } from '../data/apiHooks';
 import { TagTree } from './tagTree';
-import type {
-  RowId,
-  TreeColumnDef,
-  TreeRowData,
-} from '../tree-table/types';
+import type { RowId } from '../tree-table/types';
 import {
   TABLE_MODES,
   TRANSITION_TABLE,
   TABLE_MODE_ACTIONS,
   TAG_NAME_PATTERN,
 } from './constants';
-import { TableModeAction } from './TagListTable';
+
+import messages from './messages';
+
+export interface TableModeAction {
+  type: string;
+  targetMode: string;
+}
 
 interface UseTableModesReturn {
   tableMode: string;
@@ -38,13 +39,13 @@ interface UseEditActionsParams {
   setEditingRowId: React.Dispatch<React.SetStateAction<RowId | null>>;
 }
 
-const getInlineValidationMessage = (value: string): string => {
+const getInlineValidationMessage = (value: string, intl: ReturnType<typeof useIntl>): string => {
   const trimmed = value.trim();
   if (!trimmed) {
-    return 'Name is required';
+    return intl.formatMessage(messages.nameRequired);
   }
   if (!TAG_NAME_PATTERN.test(trimmed)) {
-    return 'Invalid character in tag name';
+    return intl.formatMessage(messages.invalidCharacterInTagName);
   }
   return '';
 };
@@ -74,8 +75,10 @@ const useTableModes = (): UseTableModesReturn => {
   const enterPreviewMode = () => transitionTableMode(TABLE_MODES.PREVIEW);
   const enterViewMode = () => transitionTableMode(TABLE_MODES.VIEW);
 
-  return { tableMode, enterDraftMode, exitDraftWithoutSave, enterPreviewMode, enterViewMode };
-}
+  return {
+    tableMode, enterDraftMode, exitDraftWithoutSave, enterPreviewMode, enterViewMode,
+  };
+};
 
 const useEditActions = ({
   setTagTree,
@@ -111,7 +114,7 @@ const useEditActions = ({
 
   const handleCreateTag = async (value: string, parentTagValue?: string) => {
     const trimmed = value.trim();
-    const validationError = getInlineValidationMessage(trimmed);
+    const validationError = getInlineValidationMessage(trimmed, intl);
     if (validationError) {
       setDraftError(validationError);
       return;
@@ -134,7 +137,7 @@ const useEditActions = ({
       setDraftError((error as Error)?.message || intl.formatMessage(messages.tagCreationErrorMessage));
       setToast({ show: true, message: intl.formatMessage(messages.tagCreationErrorMessage), variant: 'danger' });
     }
-  }
+  };
 
   const handleUpdateTag = async (value: string, originalValue: string) => {
     const trimmed = value.trim();
@@ -150,6 +153,6 @@ const useEditActions = ({
   };
 
   return { updateTableWithoutDataReload, handleCreateTag, handleUpdateTag };
-}
+};
 
 export { useTableModes, useEditActions };

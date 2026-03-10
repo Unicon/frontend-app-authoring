@@ -4,7 +4,7 @@ import React, {
   useEffect,
 } from 'react';
 import { useIntl } from '@edx/frontend-platform/i18n';
-import type { PaginationState, TableMeta } from '@tanstack/react-table';
+import type { PaginationState } from '@tanstack/react-table';
 import { useTagListData, useCreateTag } from '../data/apiHooks';
 import { TagTree } from './tagTree';
 import { TableView } from '../tree-table';
@@ -22,11 +22,6 @@ import { useTableModes, useEditActions } from './hooks';
 interface TagListTableProps {
   taxonomyId: number;
   maxDepth: number;
-}
-
-export interface TableModeAction {
-  type: string;
-  targetMode: string;
 }
 
 const TagListTable = ({ taxonomyId, maxDepth }: TagListTableProps) => {
@@ -47,36 +42,16 @@ const TagListTable = ({ taxonomyId, maxDepth }: TagListTableProps) => {
   const [isCreatingTopTag, setIsCreatingTopTag] = useState(false);
   const [activeActionMenuRowId, setActiveActionMenuRowId] = useState<RowId | null>(null);
   const [draftError, setDraftError] = useState('');
-  const [draftRowData, setDraftRowData] = useState<TreeRowData | null>(null);
   const treeData = (tagTree?.getAllAsDeepCopy() || []) as unknown as TreeRowData[];
   const hasOpenDraft = isCreatingTopTag || creatingParentId !== null || editingRowId !== null;
 
-  const meta: TableMeta<TreeRowData> = {
-    updateData: (rowId, columnId, value) => {
-      setDraftRowData((prev) => {
-        if (!prev) return prev;
-        if (prev.id !== rowId) return prev;
-        return {
-          ...prev,
-          [columnId]: value,
-        };
-      });
-    },
-    saveRow: (rowId: string | number, parentTagValue?: string) => {
-      if (!draftRowData) return;
-      // TODO: handle error / prevent this from happening
-      if (draftRowData.id !== rowId) throw new Error('Mismatching rowId on saveRow');
-      if (!parentTagValue) {
-        handleCreateTag(draftRowData.value);
-      } else if (creatingParentId && parentTagValue) {
-        handleCreateTag(draftRowData.value, parentTagValue);
-      } else if (editingRowId) {
-        // TODO: implement
-      }
-    },
-  };
+  // TABLE MODES
+  const {
+    tableMode, enterDraftMode, exitDraftWithoutSave, enterPreviewMode, enterViewMode,
+  } = useTableModes();
 
   // PAGINATION
+  // TODO: Fix and enable pagination. For now, disable pagination on the api hook side.
   const [{ pageIndex, pageSize }, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 100,
@@ -88,9 +63,6 @@ const TagListTable = ({ taxonomyId, maxDepth }: TagListTableProps) => {
     }
     setPagination(updater);
   };
-
-  // TABLE MODES
-  const { tableMode, enterDraftMode, exitDraftWithoutSave, enterPreviewMode, enterViewMode } = useTableModes();
 
   // API HOOKS
   const { isLoading, data: tagList } = useTagListData(taxonomyId, {
@@ -118,13 +90,11 @@ const TagListTable = ({ taxonomyId, maxDepth }: TagListTableProps) => {
   const columns = useMemo<TreeColumnDef[]>(
     () => getColumns({
       intl,
-      handleCreateTag,
       setIsCreatingTopTag,
       setCreatingParentId,
       handleUpdateTag,
       setEditingRowId,
       onStartDraft: enterDraftMode,
-      activeActionMenuRowId,
       setActiveActionMenuRowId,
       hasOpenDraft,
       draftError,
@@ -144,6 +114,13 @@ const TagListTable = ({ taxonomyId, maxDepth }: TagListTableProps) => {
       draftError,
       createTagMutation.isPending,
       maxDepth,
+      setIsCreatingTopTag,
+      setCreatingParentId,
+      handleUpdateTag,
+      setEditingRowId,
+      enterDraftMode,
+      setActiveActionMenuRowId,
+      setDraftError,
     ],
   );
 
@@ -162,8 +139,6 @@ const TagListTable = ({ taxonomyId, maxDepth }: TagListTableProps) => {
   return (
     <TableView
       {...{
-        meta,
-        maxDepth,
         treeData,
         columns,
         pageCount,
@@ -180,10 +155,7 @@ const TagListTable = ({ taxonomyId, maxDepth }: TagListTableProps) => {
         exitDraftWithoutSave,
         creatingParentId,
         setCreatingParentId,
-        editingRowId,
-        setEditingRowId,
         setDraftError,
-        enterDraftMode,
       }}
     />
   );

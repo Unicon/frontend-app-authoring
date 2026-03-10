@@ -7,8 +7,6 @@ import {
   Pagination,
   Alert,
   Icon,
-  Form,
-  SearchField,
 } from '@openedx/paragon';
 
 import {
@@ -18,11 +16,12 @@ import {
   flexRender,
   type OnChangeFn,
   type PaginationState,
-  type TableMeta,
 } from '@tanstack/react-table';
 
-import { LoadingSpinner } from '../../generic/Loading';
+import { ArrowDropUpDown, Info } from '@openedx/paragon/icons';
+import { useIntl } from '@edx/frontend-platform/i18n';
 import TableBody from './TableBody';
+import './TableView.scss';
 import type {
   CreateRowMutationState,
   RowId,
@@ -31,8 +30,6 @@ import type {
   TreeRowData,
 } from './types';
 import messages from './messages';
-import { ArrowDropUpDown, Info } from '@openedx/paragon/icons';
-import { useIntl } from '@edx/frontend-platform/i18n';
 
 interface TableViewProps {
   treeData: TreeRowData[];
@@ -52,12 +49,10 @@ interface TableViewProps {
   creatingParentId: RowId | null;
   setCreatingParentId: (id: RowId | null) => void;
   setDraftError: (error: string) => void;
-  meta: TableMeta<TreeRowData>;
 }
 
 const TableView = ({
   treeData,
-  meta,
   columns,
   pageCount,
   pagination,
@@ -79,7 +74,6 @@ const TableView = ({
 
   const table = useReactTable({
     data: treeData,
-    meta,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
@@ -111,28 +105,32 @@ const TableView = ({
         <Card.Section className="p-0">
           <div className="d-flex justify-content-end align-items-center p-4">
             {/* TODO: Implement search functionality */}
-            {/* <Form.Group controlId="search-input" className="mb-0 mr-2">
-                    <SearchField placeholder={intl.formatMessage(messages.searchPlaceholder)} onSubmit={() => {console.log('searched!')}} />
-                  </Form.Group> */}
             <ActionRow>
-              <Button onClick={() => table.toggleAllRowsExpanded()} variant="link" size="inline">
-                {table.getIsAllRowsExpanded() ? intl.formatMessage(messages.collapseAll) : intl.formatMessage(messages.expandAll)}
+              <Button
+                onClick={() => table.toggleAllRowsExpanded()}
+                variant="link"
+                size="inline"
+                className="text-primary-500"
+                aria-pressed={table.getIsAllRowsExpanded()}
+              >
+                {table.getIsAllRowsExpanded()
+                  ? intl.formatMessage(messages.collapseAll)
+                  : intl.formatMessage(messages.expandAll)}
                 <Icon src={ArrowDropUpDown} />
               </Button>
             </ActionRow>
           </div>
-          <table className="table w-100 tag-list-table" style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: '100%' }}>
+          <table
+            className="table w-100 tag-list-table tree-table-layout-fixed"
+          >
             <thead className="bg-light-400">
               {table.getHeaderGroups().map(headerGroup => (
                 <tr key={headerGroup.id}>
-                  {headerGroup.headers.map(header => (
-                    <th key={header.id} style={{
-                      padding: '8px',
-                      textAlign: 'left',
-                      width: header.getSize(),
-                      minWidth: header.column.columnDef.minSize ?? header.getSize(),
-                      maxWidth: header.column.columnDef.maxSize ?? header.getSize(),
-                    }}>
+                  {headerGroup.headers.map((header, index) => (
+                    <th
+                      key={header.id}
+                      className={`p-2 text-left ${index === 0 ? 'pl-2.5' : 'tree-table-actions-column'}`}
+                    >
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -162,13 +160,20 @@ const TableView = ({
         </Card.Section>
 
         {pageCount > 1 && (
-          <div role="navigation" aria-label="table pagination" className="d-flex flex-column align-items-center mt-3">
+          <div
+            role="navigation"
+            aria-label={intl.formatMessage(messages.tablePaginationLabel)}
+            className="d-flex flex-column align-items-center mt-3"
+          >
             <span>
-              Page {currentPageIndex} of {pageCount}
+              {intl.formatMessage(messages.tablePaginationPageStatus, {
+                currentPage: currentPageIndex,
+                pageCount,
+              })}
             </span>
             <Pagination
               className="d-flex justify-content-center"
-              paginationLabel="table pagination"
+              paginationLabel={intl.formatMessage(messages.tablePaginationLabel)}
               pageCount={pageCount}
               currentPage={currentPageIndex}
               onPageSelect={(page) => {
@@ -183,7 +188,6 @@ const TableView = ({
             setToast((prevToast) => ({ ...prevToast, show: false }));
           }}
           delay={15000}
-          className={toast.variant === 'danger' ? 'bg-danger-100 border-danger' : 'bg-success-100 border-success'}
         >
           {toast.message}
         </Toast>
