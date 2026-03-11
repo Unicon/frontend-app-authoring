@@ -59,7 +59,7 @@ export const apiUrls = {
    */
   tagList: (taxonomyId: number, pageIndex: number | null, pageSize: number | null, fullDepthThreshold?: number) => {
     if (pageIndex === null) {
-      return makeUrl(`${taxonomyId}/tags/`, { full_depth_threshold: fullDepthThreshold || 0 });
+      return makeUrl(`${taxonomyId}/tags/`, { full_depth_threshold: fullDepthThreshold || 0, include_counts: 'true' });
     }
     return makeUrl(`${taxonomyId}/tags/`, {
       page: (pageIndex ?? 0) + 1,
