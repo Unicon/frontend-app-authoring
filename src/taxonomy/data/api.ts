@@ -2,6 +2,8 @@ import { camelCaseObject, getConfig } from '@edx/frontend-platform';
 import { getAuthenticatedHttpClient } from '@edx/frontend-platform/auth';
 import type { TaxonomyData, TaxonomyListData } from './types';
 
+
+
 const getApiBaseUrl = () => getConfig().STUDIO_BASE_URL;
 const getTaxonomiesV1Endpoint = () => new URL('api/content_tagging/v1/taxonomies/', getApiBaseUrl()).href;
 /**
@@ -59,7 +61,7 @@ export const apiUrls = {
    */
   tagList: (taxonomyId: number, pageIndex: number | null, pageSize: number | null, fullDepthThreshold?: number) => {
     if (pageIndex === null) {
-      return makeUrl(`${taxonomyId}/tags/`, { full_depth_threshold: fullDepthThreshold || 0 });
+      return makeUrl(`${taxonomyId}/tags/`, { full_depth_threshold: fullDepthThreshold || 0, include_counts: 'true' });
     }
     return makeUrl(`${taxonomyId}/tags/`, {
       page: (pageIndex ?? 0) + 1,
