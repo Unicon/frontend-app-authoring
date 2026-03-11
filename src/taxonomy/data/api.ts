@@ -2,8 +2,6 @@ import { camelCaseObject, getConfig } from '@edx/frontend-platform';
 import { getAuthenticatedHttpClient } from '@edx/frontend-platform/auth';
 import type { TaxonomyData, TaxonomyListData } from './types';
 
-
-
 const getApiBaseUrl = () => getConfig().STUDIO_BASE_URL;
 const getTaxonomiesV1Endpoint = () => new URL('api/content_tagging/v1/taxonomies/', getApiBaseUrl()).href;
 /**
