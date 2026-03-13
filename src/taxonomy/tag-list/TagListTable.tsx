@@ -5,7 +5,7 @@ import React, {
 } from 'react';
 import { useIntl } from '@edx/frontend-platform/i18n';
 import type { PaginationState } from '@tanstack/react-table';
-import { useTagListData, useCreateTag } from '../data/apiHooks';
+import { useTagListData, useCreateTag, useUpdateTag } from '../data/apiHooks';
 import { TagTree } from './tagTree';
 import { TableView } from '../tree-table';
 import type {
@@ -70,14 +70,16 @@ const TagListTable = ({ taxonomyId, maxDepth }: TagListTableProps) => {
     enabled: tableMode === TABLE_MODES.VIEW,
   });
   const createTagMutation = useCreateTag(taxonomyId);
+  const updateTagMutation = useUpdateTag(taxonomyId);
   const pageCount = tagList?.numPages ?? -1;
 
   // Custom Edit Actions Hook - handles table mode transitions, API calls,
   // and updating the table without a full data reload when creating or editing tags.
-  const { handleCreateTag, handleUpdateTag } = useEditActions({
+  const { handleCreateTag, handleUpdateTag, validate } = useEditActions({
     setTagTree,
     setDraftError,
     createTagMutation,
+    updateTagMutation,
     enterPreviewMode,
     setToast,
     intl,
@@ -97,20 +99,20 @@ const TagListTable = ({ taxonomyId, maxDepth }: TagListTableProps) => {
       onStartDraft: enterDraftMode,
       setActiveActionMenuRowId,
       hasOpenDraft,
+      canAddTag: tagList?.canAddTag !== false,
       draftError,
       setDraftError,
       isSavingDraft: createTagMutation.isPending,
       maxDepth,
-      creatingParentId,
     }),
     [
       intl,
       isCreatingTopTag,
-      editingRowId,
       tableMode,
       activeActionMenuRowId,
       hasOpenDraft,
       creatingParentId,
+      tagList?.canAddTag,
       draftError,
       createTagMutation.isPending,
       maxDepth,
@@ -148,7 +150,9 @@ const TagListTable = ({ taxonomyId, maxDepth }: TagListTableProps) => {
         isCreatingTopRow: isCreatingTopTag,
         draftError,
         createRowMutation: createTagMutation,
+        updateRowMutation: updateTagMutation,
         handleCreateRow: handleCreateTag,
+        handleUpdateRow: handleUpdateTag,
         toast,
         setToast,
         setIsCreatingTopRow: setIsCreatingTopTag,
@@ -156,6 +160,9 @@ const TagListTable = ({ taxonomyId, maxDepth }: TagListTableProps) => {
         creatingParentId,
         setCreatingParentId,
         setDraftError,
+        validate,
+        editingRowId,
+        setEditingRowId,
       }}
     />
   );

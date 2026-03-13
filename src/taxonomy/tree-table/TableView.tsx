@@ -35,12 +35,14 @@ interface TableViewProps {
   treeData: TreeRowData[];
   columns: TreeColumnDef[];
   pageCount: number;
+  enablePagination?: boolean;
   pagination: PaginationState;
   handlePaginationChange: OnChangeFn<PaginationState>;
   isLoading: boolean;
   isCreatingTopRow: boolean;
   draftError: string;
   createRowMutation: CreateRowMutationState;
+  updateRowMutation: CreateRowMutationState;
   toast: ToastState;
   setToast: React.Dispatch<React.SetStateAction<ToastState>>;
   setIsCreatingTopRow: (isCreating: boolean) => void;
@@ -49,18 +51,24 @@ interface TableViewProps {
   creatingParentId: RowId | null;
   setCreatingParentId: (id: RowId | null) => void;
   setDraftError: (error: string) => void;
+  validate: (value: string, mode?: 'soft' | 'hard') => boolean;
+  handleUpdateRow: (value: string, originalValue: string) => void;
+  editingRowId: RowId | null;
+  setEditingRowId: (id: RowId | null) => void;
 }
 
 const TableView = ({
   treeData,
   columns,
   pageCount,
+  enablePagination = false,
   pagination,
   handlePaginationChange,
   isLoading,
   isCreatingTopRow,
   draftError,
   createRowMutation,
+  updateRowMutation,
   handleCreateRow,
   toast,
   setToast,
@@ -69,6 +77,10 @@ const TableView = ({
   creatingParentId,
   setCreatingParentId,
   setDraftError,
+  validate,
+  handleUpdateRow,
+  editingRowId,
+  setEditingRowId,
 }: TableViewProps) => {
   const intl = useIntl();
 
@@ -98,7 +110,7 @@ const TableView = ({
           <Alert.Heading>
             {intl.formatMessage(messages.errorSavingTitle)}
           </Alert.Heading>
-          {intl.formatMessage(messages.errorSavingMessage)}
+          {intl.formatMessage(messages.errorSavingMessage, { errorMessage: draftError || intl.formatMessage(messages.errorSavingMessage, { errorMessage: '' }) })}
         </Alert>
       )}
       <Card className="tag-list-card">
@@ -153,13 +165,18 @@ const TableView = ({
               setCreatingParentId={setCreatingParentId}
               setDraftError={setDraftError}
               createRowMutation={createRowMutation}
+              updateRowMutation={updateRowMutation}
               table={table}
               isLoading={isLoading}
+              validate={validate}
+              handleUpdateRow={handleUpdateRow}
+              editingRowId={editingRowId}
+              setEditingRowId={setEditingRowId}
             />
           </table>
         </Card.Section>
 
-        {pageCount > 1 && (
+        {enablePagination && pageCount > 1 && (
           <div
             role="navigation"
             aria-label={intl.formatMessage(messages.tablePaginationLabel)}

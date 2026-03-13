@@ -1,8 +1,9 @@
 import { useReducer } from 'react';
 import { useIntl } from '@edx/frontend-platform/i18n';
 
-import { useCreateTag } from '../data/apiHooks';
+import { useCreateTag, useUpdateTag } from '../data/apiHooks';
 import { TagTree } from './tagTree';
+import type { TagTreeNode } from './tagTree';
 import type { RowId } from '../tree-table/types';
 import {
   TABLE_MODES,
@@ -37,6 +38,7 @@ interface UseEditActionsParams {
   setCreatingParentId: React.Dispatch<React.SetStateAction<RowId | null>>;
   exitDraftWithoutSave: () => void;
   setEditingRowId: React.Dispatch<React.SetStateAction<RowId | null>>;
+  updateTagMutation: ReturnType<typeof useUpdateTag>;
 }
 
 const getInlineValidationMessage = (value: string, intl: ReturnType<typeof useIntl>): string => {
@@ -91,7 +93,53 @@ const useEditActions = ({
   setCreatingParentId,
   exitDraftWithoutSave,
   setEditingRowId,
+  updateTagMutation,
 }: UseEditActionsParams) => {
+  // TODO: Move this to tagTree together with very solid tests.
+  const flattenRows = (nodes: TagTreeNode[]): TagTreeNode[] => {
+    const result: TagTreeNode[] = [];
+
+    nodes.forEach((node) => {
+      const { subRows = [], ...rest } = node;
+      result.push({ ...rest, subRows: undefined });
+      if (subRows.length > 0) {
+        result.push(...flattenRows(subRows));
+      }
+    });
+
+    return result;
+  };
+
+  const renameNode = (nodes: TagTreeNode[], oldValue: string, newValue: string): TagTreeNode[] => (
+    nodes.map((node) => {
+      const renamedNode = {
+        ...node,
+        parentValue: node.parentValue === oldValue ? newValue : node.parentValue,
+        value: node.value === oldValue ? newValue : node.value,
+      };
+
+      if (!node.subRows?.length) {
+        return renamedNode;
+      }
+
+      return {
+        ...renamedNode,
+        subRows: renameNode(node.subRows, oldValue, newValue),
+      };
+    })
+  );
+
+  const updateTableAfterRename = (oldValue: string, newValue: string) => {
+    setTagTree((currentTagTree) => {
+      if (!currentTagTree) {
+        return currentTagTree;
+      }
+
+      const renamedTreeRows = renameNode(currentTagTree.getAllAsDeepCopy(), oldValue, newValue);
+      return new TagTree(flattenRows(renamedTreeRows));
+    });
+  };
+
   const updateTableWithoutDataReload = (value: string, parentTagValue: string | null = null) => {
     setTagTree((currentTagTree) => {
       const nextTree = currentTagTree || new TagTree([]);
@@ -112,11 +160,24 @@ const useEditActions = ({
     });
   };
 
+  const validate = (value: string, mode: 'soft' | 'hard' = 'hard'): boolean => {
+    const validationError = getInlineValidationMessage(value, intl);
+    if (validationError) {
+      if (mode === 'hard') {
+        throw new Error(validationError);
+      }
+      setDraftError(validationError);
+      return false;
+    }
+
+    setDraftError('');
+    return true;
+  };
+
   const handleCreateTag = async (value: string, parentTagValue?: string) => {
     const trimmed = value.trim();
-    const validationError = getInlineValidationMessage(trimmed, intl);
-    if (validationError) {
-      setDraftError(validationError);
+
+    if (!validate(trimmed, 'soft')) {
       return;
     }
 
@@ -133,26 +194,49 @@ const useEditActions = ({
       setIsCreatingTopTag(false);
       setCreatingParentId(null);
     } catch (error) {
-      exitDraftWithoutSave();
-      setDraftError((error as Error)?.message || intl.formatMessage(messages.tagCreationErrorMessage));
-      setToast({ show: true, message: intl.formatMessage(messages.tagCreationErrorMessage), variant: 'danger' });
+      const message = intl.formatMessage(messages.tagCreationErrorMessage, { errorMessage: (error as Error)?.message });
+      setDraftError((error as Error)?.message || intl.formatMessage(messages.tagCreationErrorMessage, { errorMessage: '' }));
+      setToast({ show: true, message, variant: 'danger' });
     }
   };
 
   const handleUpdateTag = async (value: string, originalValue: string) => {
+    console.log('handleUpdateTag called with value:', value, 'originalValue:', originalValue);
     const trimmed = value.trim();
-    if (trimmed && trimmed !== originalValue) {
+    if (!validate(trimmed, 'soft')) {
+      return;
+    }
+
+    if (trimmed === originalValue) {
+      setEditingRowId(null);
+      exitDraftWithoutSave();
+      return;
+    }
+
+    try {
+      setDraftError('');
+      await updateTagMutation.mutateAsync({ value: trimmed, originalValue });
+      updateTableAfterRename(originalValue, trimmed);
       enterPreviewMode();
+      setEditingRowId(null);
       setToast({
         show: true,
         message: intl.formatMessage(messages.tagUpdateSuccessMessage, { name: trimmed }),
         variant: 'success',
       });
+    } catch (error) {
+      const message = intl.formatMessage(messages.tagUpdateErrorMessage, { errorMessage: (error as Error)?.message });
+      setDraftError((error as Error)?.message || '');
+      setToast({ show: true, message, variant: 'danger' });
     }
-    setEditingRowId(null);
   };
 
-  return { updateTableWithoutDataReload, handleCreateTag, handleUpdateTag };
+  return {
+    updateTableWithoutDataReload,
+    handleCreateTag,
+    handleUpdateTag,
+    validate,
+  };
 };
 
 export { useTableModes, useEditActions };

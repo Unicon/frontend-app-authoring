@@ -20,6 +20,8 @@ import type {
 } from '../tree-table/types';
 import OptionalExpandLink from './OptionalExpandLink';
 
+const EDITABLE_COLUMNS = ['value'];
+
 interface TagListRowData extends TreeRowData {
   depth: number;
   childCount: number;
@@ -41,11 +43,11 @@ interface GetColumnsArgs {
   onStartDraft: () => void;
   setActiveActionMenuRowId: (id: RowId | null) => void;
   hasOpenDraft: boolean;
+  canAddTag: boolean;
   draftError: string;
   setDraftError: (error: string) => void;
   isSavingDraft: boolean;
   maxDepth: number;
-  creatingParentId: RowId | null;
 }
 
 function getColumns({
@@ -56,15 +58,17 @@ function getColumns({
   onStartDraft,
   setActiveActionMenuRowId,
   hasOpenDraft,
+  canAddTag,
   setDraftError,
   maxDepth,
-  creatingParentId,
 }: GetColumnsArgs): TreeColumnDef[] {
-  const canAddSubtag = (row: Row<TreeRowData>) => row.depth + 1 < maxDepth;
+  const reachedMaxDepth = (row: Row<TreeRowData>) => row.depth + 1 >= maxDepth;
   const draftInProgressHintId = 'tag-list-draft-in-progress-hint';
 
   return [
     {
+      id: 'value',
+      accessorFn: (row) => row.value,
       header: intl.formatMessage(messages.tagListColumnValueHeader),
       cell: ({ row }) => {
         const {
@@ -96,7 +100,7 @@ function getColumns({
               setEditingRowId(null);
               setActiveActionMenuRowId(null);
             }}
-            disabled={hasOpenDraft}
+            disabled={hasOpenDraft || !canAddTag}
             aria-describedby={hasOpenDraft ? draftInProgressHintId : undefined}
           />
         </div>
@@ -104,11 +108,13 @@ function getColumns({
       cell: ({ row }) => {
         const rowData = asTagListRowData(row);
 
-        if (rowData.isNew || rowData.isEditing || !canAddSubtag(row)) {
+        if (rowData.isNew || rowData.isEditing) {
           return <div className="d-flex gap-2" />;
         }
 
-        const disableAddSubtag = hasOpenDraft && creatingParentId !== rowData.id;
+        const disableAddSubtag = hasOpenDraft || !canAddTag;
+        const disableEditTag = hasOpenDraft || !canAddTag || row.original.canChangeTag === false;
+
         const startSubtagDraft = () => {
           onStartDraft();
           setDraftError('');
@@ -117,6 +123,15 @@ function getColumns({
           setIsCreatingTopTag(false);
           setActiveActionMenuRowId(null);
           row.toggleExpanded(true);
+        };
+
+        const editTag = () => {
+          onStartDraft();
+          setDraftError('');
+          setEditingRowId(`${rowData.id}:${rowData.value}`);
+          setCreatingParentId(null);
+          setIsCreatingTopTag(false);
+          setActiveActionMenuRowId(null);
         };
 
         return (
@@ -135,9 +150,16 @@ function getColumns({
                 <Dropdown.Item
                   as={Button}
                   onClick={startSubtagDraft}
-                  disabled={disableAddSubtag}
+                  disabled={reachedMaxDepth(row) || disableAddSubtag}
                 >
                   {intl.formatMessage(messages.addSubtag)}
+                </Dropdown.Item>
+                <Dropdown.Item
+                  as={Button}
+                  onClick={editTag}
+                  disabled={disableEditTag}
+                >
+                  {intl.formatMessage(messages.renameTag)}
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown>
@@ -148,4 +170,4 @@ function getColumns({
   ];
 }
 
-export { getColumns };
+export { getColumns, EDITABLE_COLUMNS };

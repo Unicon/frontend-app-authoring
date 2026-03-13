@@ -15,7 +15,7 @@ const messages = defineMessages({
   },
   tagCreationErrorMessage: {
     id: 'course-authoring.tag-list.creation-error',
-    defaultMessage: 'Error: unable to create tag',
+    defaultMessage: 'Error creating tag: {errorMessage}',
   },
   tagUpdateSuccessMessage: {
     id: 'course-authoring.tag-list.update-success',
@@ -52,6 +52,14 @@ const messages = defineMessages({
   hideSubtagsButtonLabel: {
     id: 'course-authoring.tag-list.hide-subtags.button-label',
     defaultMessage: 'Hide Subtags',
+  },
+  tagUpdateErrorMessage: {
+    id: 'course-authoring.tag-list.update-error',
+    defaultMessage: 'Error updating tag: {errorMessage}',
+  },
+  renameTag: {
+    id: 'course-authoring.tag-list.rename-tag',
+    defaultMessage: 'Rename',
   },
 });
 
