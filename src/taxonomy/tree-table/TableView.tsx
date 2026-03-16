@@ -101,11 +101,12 @@ const TableView = ({
   const currentPageIndex = table.getState().pagination.pageIndex + 1;
 
   const { isError } = createRowMutation;
+  const { isError: isUpdateError } = updateRowMutation;
   const [showError, setShowError] = React.useState(true);
 
   return (
     <>
-      {isError && showError && (
+      {(isError || isUpdateError) && showError && (
         <Alert variant="danger" icon={Info} dismissible onClose={() => setShowError(false)}>
           <Alert.Heading>
             {intl.formatMessage(messages.errorSavingTitle)}

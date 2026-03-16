@@ -226,7 +226,7 @@ const useEditActions = ({
       });
     } catch (error) {
       const message = intl.formatMessage(messages.tagUpdateErrorMessage, { errorMessage: (error as Error)?.message });
-      setDraftError((error as Error)?.message || '');
+      setDraftError((error as Error)?.message || intl.formatMessage(messages.tagUpdateErrorMessage, { errorMessage: '' }));
       setToast({ show: true, message, variant: 'danger' });
     }
   };

@@ -766,6 +766,40 @@ describe('<TagListTable />', () => {
     });
   });
 
+  describe('Tag Rename Errors', () => {
+    it('should keep the inline row and show a failure toast when save request fails', async () => {
+      axiosMock.onPatch().reply(500, {
+        error: 'Internal server error',
+      });
+      const { input } = await openRenameDraftRow('root tag 1');
+
+      fireEvent.change(input, { target: { value: 'will fail' } });
+      act(() => {
+        fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
+      });
+
+      let draftRow;
+      await waitFor(() => {
+        const rows = screen.getAllByRole('row');
+        const draftRows = rows.filter(row => row.querySelector('input'));
+        expect(draftRows.length).toBe(1);
+        draftRow = draftRows[0]; // eslint-disable-line prefer-destructuring
+      });
+
+      // Banner error message should be shown at the top of the table
+      expect(await screen.findByText('Error saving changes')).toBeInTheDocument();
+
+      // Toast message to indicate that the save failed
+      expect(await screen.findByText('Error saving changes')).toBeInTheDocument();
+      expect(await screen.findByText('Internal server error')).toBeInTheDocument();
+
+      // expect the input to retain the value that was entered before
+      expect(draftRow.querySelector('input').value).toEqual('will fail');
+      // expect the new tag to not be in the document outside the input field
+      expect(screen.queryByText('will fail')).not.toBeInTheDocument();
+    });
+  });
+
   const tagDepthScenarios = [
     {
       description: 'Rename a top-level tag',
