@@ -170,11 +170,15 @@ const openTopLevelDraftRow = async () => {
 };
 
 const openActionsMenuForTag = (tagName, actionButtonName = /actions/i) => {
-  // expand all
-  const expandButton = screen.getAllByText('Expand All')[0];
-  act(() => {
-    fireEvent.click(expandButton);
-  });
+  if (!screen.queryAllByText(tagName)?.length) {
+    // expand all
+    const expandButton = screen.queryAllByText('Expand All')?.[0];
+    act(() => {
+      if (expandButton) {
+        fireEvent.click(expandButton);
+      }
+    });
+  }
   const row = screen.getByText(tagName).closest('tr');
   const actionsButton = within(row).getByRole('button', { name: actionButtonName });
   act(() => {
@@ -877,6 +881,40 @@ describe('<TagListTable />', () => {
         expect(screen.getByText(tagName)).toBeInTheDocument();
         expect(axiosMock.history.patch.length).toBe(0);
       });
+    });
+  });
+
+  describe('Nested behavior', () => {
+    beforeEach(async () => {
+      axiosMock.resetHistory();
+    });
+
+    it('should keep the parent-child relationships in the updated tree data when renaming a parent tag', async () => {
+      // this only tests that the frontend is updated correctly before reloading data;
+      // the rest is covered by the backend tests for the rename endpoint
+
+      axiosMock.onPatch(/.*/).reply(200, {});
+      const { input, saveButton } = await openRenameDraftRow('root tag 1');
+
+      fireEvent.change(input, { target: { value: 'root tag 1 updated' } });
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(axiosMock.history.patch.length).toBe(1);
+        expect(axiosMock.history.patch[0].data).toEqual(JSON.stringify({
+          tag: 'root tag 1',
+          updated_tag_value: 'root tag 1 updated',
+        }));
+      });
+      // make sure rows are not already expanded by checking that the child tag is not visible before expanding
+      expect(screen.queryAllByText('the child tag')?.length).toBeFalsy();
+      fireEvent.click(await screen.findByLabelText('Show Subtags'));
+      // expect the child tag to still be present under the renamed parent tag
+      expect(await screen.findByText('the child tag')).toBeInTheDocument();
+      // expect the grandchild tag to still be present under the child tag
+      openActionsMenuForTag('the child tag');
+      fireEvent.click(await screen.findByLabelText('Show Subtags'));
+      expect(await screen.findByText('the grandchild tag')).toBeInTheDocument();
     });
   });
 
