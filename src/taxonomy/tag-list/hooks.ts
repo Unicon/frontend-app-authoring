@@ -201,7 +201,6 @@ const useEditActions = ({
   };
 
   const handleUpdateTag = async (value: string, originalValue: string) => {
-    console.log('handleUpdateTag called with value:', value, 'originalValue:', originalValue);
     const trimmed = value.trim();
     if (!validate(trimmed, 'soft')) {
       return;
