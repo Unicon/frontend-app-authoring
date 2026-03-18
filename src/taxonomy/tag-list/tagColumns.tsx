@@ -62,7 +62,7 @@ function getColumns({
   setDraftError,
   maxDepth,
 }: GetColumnsArgs): TreeColumnDef[] {
-  const reachedMaxDepth = (row: Row<TreeRowData>) => row.depth + 1 >= maxDepth;
+  const reachedMaxDepth = (row: Row<TreeRowData>) => row.depth >= maxDepth;
   const draftInProgressHintId = 'tag-list-draft-in-progress-hint';
 
   return [
