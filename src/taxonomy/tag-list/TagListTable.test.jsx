@@ -230,6 +230,7 @@ describe('<TagListTable />', () => {
     });
     store = initializeStore();
     queryClient.clear();
+    axiosMock.reset();
     axiosMock = new MockAdapter(getAuthenticatedHttpClient());
     axiosMock.onGet(rootTagsListUrl).reply(200, mockTagsResponse);
     axiosMock.onGet(subTagsUrl).reply(200, subTagsResponse);
@@ -309,6 +310,10 @@ describe('<TagListTable />', () => {
     });
 
     describe('with editable user and loaded taxonomy', () => {
+      beforeEach(() => {
+        axiosMock.onGet(rootTagsListUrl).reply(200, mockTagsResponse);
+      });
+
       it('should add draft row when top-level "Add tag" button is clicked', async () => {
         const { creatingRow } = await openTopLevelDraftRow();
 
