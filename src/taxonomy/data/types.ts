@@ -51,8 +51,6 @@ export interface TagData {
   usageCount?: number;
   /** Database ID. Don't rely on this, as it is not present for free-text tags. */
   _id?: string;
-  canChangeTag?: boolean;
-  canDeleteTag?: boolean;
 }
 
 export interface TagListData {
