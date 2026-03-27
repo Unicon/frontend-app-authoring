@@ -9,8 +9,8 @@ import {
   AddCircle,
   MoreVert,
 } from '@openedx/paragon/icons';
+import { FormattedMessage, useIntl } from '@edx/frontend-platform/i18n';
 import type { Row } from '@tanstack/react-table';
-import type { IntlShape } from 'react-intl';
 
 import messages from './messages';
 import type {
@@ -19,6 +19,8 @@ import type {
   TreeRowData,
 } from '../tree-table/types';
 import OptionalExpandLink from './OptionalExpandLink';
+
+const EDITABLE_COLUMNS = ['value'];
 
 interface TagListRowData extends TreeRowData {
   depth: number;
@@ -33,7 +35,6 @@ const asTagListRowData = (row: Row<TreeRowData>): TagListRowData => (
 );
 
 interface GetColumnsArgs {
-  intl: IntlShape;
   setIsCreatingTopTag: (isCreating: boolean) => void;
   setCreatingParentId: (id: RowId | null) => void;
   handleUpdateTag: (value: string, originalValue: string) => void;
@@ -41,31 +42,127 @@ interface GetColumnsArgs {
   onStartDraft: () => void;
   setActiveActionMenuRowId: (id: RowId | null) => void;
   hasOpenDraft: boolean;
+  canAddTag: boolean;
   draftError: string;
   setDraftError: (error: string) => void;
   isSavingDraft: boolean;
   maxDepth: number;
-  creatingParentId: RowId | null;
 }
 
+interface ActionsHeaderProps {
+  onStartDraft: () => void;
+  setDraftError: (error: string) => void;
+  setIsCreatingTopTag: (isCreating: boolean) => void;
+  setEditingRowId: (id: RowId | null) => void;
+  setActiveActionMenuRowId: (id: RowId | null) => void;
+  hasOpenDraft: boolean;
+  draftInProgressHintId: string;
+  canAddTag: boolean;
+}
+
+const ActionsHeader = ({
+  onStartDraft,
+  setDraftError,
+  setIsCreatingTopTag,
+  setEditingRowId,
+  setActiveActionMenuRowId,
+  hasOpenDraft,
+  canAddTag,
+  draftInProgressHintId,
+}: ActionsHeaderProps) => {
+  const intl = useIntl();
+  return (
+    <div className="d-flex justify-content-end">
+      <IconButtonWithTooltip
+        tooltipPlacement="top"
+        tooltipContent={<div>{intl.formatMessage(messages.createNewTagTooltip)}</div>}
+        src={AddCircle}
+        alt={intl.formatMessage(messages.createTagButtonLabel)}
+        size="inline"
+        onClick={() => {
+          onStartDraft();
+          setDraftError('');
+          setIsCreatingTopTag(true);
+          setEditingRowId(null);
+          setActiveActionMenuRowId(null);
+        }}
+        disabled={hasOpenDraft || !canAddTag}
+        aria-describedby={hasOpenDraft ? draftInProgressHintId : undefined}
+      />
+    </div>
+  );
+};
+
+interface ActionsMenuProps {
+  rowData: TagListRowData;
+  startSubtagDraft: () => void;
+  disableAddSubtag: boolean;
+  editTag: () => void;
+  disableEditTag: boolean;
+  reachedMaxDepth: (row: Row<TreeRowData>) => boolean;
+  row: Row<TreeRowData>;
+}
+
+const ActionsMenu = ({
+  rowData,
+  row,
+  startSubtagDraft,
+  disableAddSubtag,
+  editTag,
+  disableEditTag,
+  reachedMaxDepth,
+}: ActionsMenuProps) => {
+  const intl = useIntl();
+
+  return (
+    <Dropdown>
+      <Dropdown.Toggle
+        id={`dropdown-toggle-for-tag-${rowData.id}`}
+        as={IconButton}
+        src={MoreVert}
+        iconAs={Icon}
+        variant="primary"
+        aria-label={intl.formatMessage(messages.moreActionsForTag, { tagName: rowData.value })}
+        size="sm"
+      />
+      <Dropdown.Menu>
+        <Dropdown.Item
+          as={Button}
+          onClick={startSubtagDraft}
+          disabled={reachedMaxDepth(row) || disableAddSubtag}
+        >
+          {intl.formatMessage(messages.addSubtag)}
+        </Dropdown.Item>
+        <Dropdown.Item
+          as={Button}
+          onClick={editTag}
+          disabled={disableEditTag}
+        >
+          {intl.formatMessage(messages.renameTag)}
+        </Dropdown.Item>
+      </Dropdown.Menu>
+    </Dropdown>
+  );
+};
+
 function getColumns({
-  intl,
   setIsCreatingTopTag,
   setCreatingParentId,
   setEditingRowId,
   onStartDraft,
   setActiveActionMenuRowId,
   hasOpenDraft,
+  canAddTag,
   setDraftError,
   maxDepth,
-  creatingParentId,
 }: GetColumnsArgs): TreeColumnDef[] {
-  const canAddSubtag = (row: Row<TreeRowData>) => row.depth < maxDepth;
+  const reachedMaxDepth = (row: Row<TreeRowData>) => row.depth >= maxDepth;
   const draftInProgressHintId = 'tag-list-draft-in-progress-hint';
 
   return [
     {
-      header: intl.formatMessage(messages.tagListColumnValueHeader),
+      id: 'valueColumn',
+      header: () => <FormattedMessage {...messages.tagListColumnValueHeader} />,
       cell: ({ row }) => {
         const {
           value,
@@ -82,33 +179,27 @@ function getColumns({
     {
       id: 'actions',
       header: () => (
-        <div className="d-flex justify-content-end">
-          <IconButtonWithTooltip
-            tooltipPlacement="top"
-            tooltipContent={<div>{intl.formatMessage(messages.createNewTagTooltip)}</div>}
-            src={AddCircle}
-            alt={intl.formatMessage(messages.createTagButtonLabel)}
-            size="inline"
-            onClick={() => {
-              onStartDraft();
-              setDraftError('');
-              setIsCreatingTopTag(true);
-              setEditingRowId(null);
-              setActiveActionMenuRowId(null);
-            }}
-            disabled={hasOpenDraft}
-            aria-describedby={hasOpenDraft ? draftInProgressHintId : undefined}
-          />
-        </div>
+        <ActionsHeader
+          onStartDraft={onStartDraft}
+          setDraftError={setDraftError}
+          setIsCreatingTopTag={setIsCreatingTopTag}
+          setEditingRowId={setEditingRowId}
+          setActiveActionMenuRowId={setActiveActionMenuRowId}
+          hasOpenDraft={hasOpenDraft}
+          draftInProgressHintId={draftInProgressHintId}
+          canAddTag={canAddTag}
+        />
       ),
       cell: ({ row }) => {
         const rowData = asTagListRowData(row);
 
-        if (rowData.isNew || rowData.isEditing || !canAddSubtag(row)) {
+        if (rowData.isNew || rowData.isEditing) {
           return <div className="d-flex gap-2" />;
         }
 
-        const disableAddSubtag = hasOpenDraft && creatingParentId !== rowData.id;
+        const disableAddSubtag = hasOpenDraft || !canAddTag;
+        const disableEditTag = hasOpenDraft || !canAddTag || row.original.canChangeTag === false;
+
         const startSubtagDraft = () => {
           onStartDraft();
           setDraftError('');
@@ -119,28 +210,26 @@ function getColumns({
           row.toggleExpanded(true);
         };
 
+        const editTag = () => {
+          onStartDraft();
+          setDraftError('');
+          setEditingRowId(`${rowData.id}:${rowData.value}`);
+          setCreatingParentId(null);
+          setIsCreatingTopTag(false);
+          setActiveActionMenuRowId(null);
+        };
+
         return (
           <div className="d-flex align-items-center justify-content-end gap-2">
-            <Dropdown>
-              <Dropdown.Toggle
-                id={`dropdown-toggle-for-tag-${rowData.id}`}
-                as={IconButton}
-                src={MoreVert}
-                iconAs={Icon}
-                variant="primary"
-                aria-label={intl.formatMessage(messages.moreActionsForTag, { tagName: rowData.value })}
-                size="sm"
-              />
-              <Dropdown.Menu>
-                <Dropdown.Item
-                  as={Button}
-                  onClick={startSubtagDraft}
-                  disabled={disableAddSubtag}
-                >
-                  {intl.formatMessage(messages.addSubtag)}
-                </Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown>
+            <ActionsMenu
+              rowData={rowData}
+              row={row}
+              startSubtagDraft={startSubtagDraft}
+              disableAddSubtag={disableAddSubtag}
+              editTag={editTag}
+              disableEditTag={disableEditTag}
+              reachedMaxDepth={reachedMaxDepth}
+            />
           </div>
         );
       },
@@ -148,4 +237,4 @@ function getColumns({
   ];
 }
 
-export { getColumns };
+export { getColumns, EDITABLE_COLUMNS };
