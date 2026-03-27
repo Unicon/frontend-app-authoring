@@ -9,8 +9,8 @@ import {
   AddCircle,
   MoreVert,
 } from '@openedx/paragon/icons';
+import { FormattedMessage, useIntl } from '@edx/frontend-platform/i18n';
 import type { Row } from '@tanstack/react-table';
-import type { IntlShape } from 'react-intl';
 
 import messages from './messages';
 import type {
@@ -35,7 +35,6 @@ const asTagListRowData = (row: Row<TreeRowData>): TagListRowData => (
 );
 
 interface GetColumnsArgs {
-  intl: IntlShape;
   setIsCreatingTopTag: (isCreating: boolean) => void;
   setCreatingParentId: (id: RowId | null) => void;
   handleUpdateTag: (value: string, originalValue: string) => void;
@@ -50,8 +49,103 @@ interface GetColumnsArgs {
   maxDepth: number;
 }
 
+interface ActionsHeaderProps {
+  onStartDraft: () => void;
+  setDraftError: (error: string) => void;
+  setIsCreatingTopTag: (isCreating: boolean) => void;
+  setEditingRowId: (id: RowId | null) => void;
+  setActiveActionMenuRowId: (id: RowId | null) => void;
+  hasOpenDraft: boolean;
+  draftInProgressHintId: string;
+  canAddTag: boolean;
+}
+
+const ActionsHeader = ({
+  onStartDraft,
+  setDraftError,
+  setIsCreatingTopTag,
+  setEditingRowId,
+  setActiveActionMenuRowId,
+  hasOpenDraft,
+  canAddTag,
+  draftInProgressHintId,
+}: ActionsHeaderProps) => {
+  const intl = useIntl();
+  return (
+    <div className="d-flex justify-content-end">
+      <IconButtonWithTooltip
+        tooltipPlacement="top"
+        tooltipContent={<div>{intl.formatMessage(messages.createNewTagTooltip)}</div>}
+        src={AddCircle}
+        alt={intl.formatMessage(messages.createTagButtonLabel)}
+        size="inline"
+        onClick={() => {
+          onStartDraft();
+          setDraftError('');
+          setIsCreatingTopTag(true);
+          setEditingRowId(null);
+          setActiveActionMenuRowId(null);
+        }}
+        disabled={hasOpenDraft || !canAddTag}
+        aria-describedby={hasOpenDraft ? draftInProgressHintId : undefined}
+      />
+    </div>
+  );
+};
+
+interface ActionsMenuProps {
+  rowData: TagListRowData;
+  startSubtagDraft: () => void;
+  disableAddSubtag: boolean;
+  editTag: () => void;
+  disableEditTag: boolean;
+  reachedMaxDepth: (row: Row<TreeRowData>) => boolean;
+  row: Row<TreeRowData>;
+}
+
+const ActionsMenu = ({
+  rowData,
+  row,
+  startSubtagDraft,
+  disableAddSubtag,
+  editTag,
+  disableEditTag,
+  reachedMaxDepth,
+}: ActionsMenuProps) => {
+  const intl = useIntl();
+
+  return (
+    <Dropdown>
+      <Dropdown.Toggle
+        id={`dropdown-toggle-for-tag-${rowData.id}`}
+        as={IconButton}
+        src={MoreVert}
+        iconAs={Icon}
+        variant="primary"
+        aria-label={intl.formatMessage(messages.moreActionsForTag, { tagName: rowData.value })}
+        size="sm"
+      />
+      <Dropdown.Menu>
+        <Dropdown.Item
+          as={Button}
+          onClick={startSubtagDraft}
+          disabled={reachedMaxDepth(row) || disableAddSubtag}
+        >
+          {intl.formatMessage(messages.addSubtag)}
+        </Dropdown.Item>
+        <Dropdown.Item
+          as={Button}
+          onClick={editTag}
+          disabled={disableEditTag}
+        >
+          {intl.formatMessage(messages.renameTag)}
+        </Dropdown.Item>
+      </Dropdown.Menu>
+    </Dropdown>
+  );
+};
+
 function getColumns({
-  intl,
   setIsCreatingTopTag,
   setCreatingParentId,
   setEditingRowId,
@@ -67,9 +161,8 @@ function getColumns({
 
   return [
     {
-      id: 'value',
-      accessorFn: (row) => row.value,
-      header: intl.formatMessage(messages.tagListColumnValueHeader),
+      id: 'valueColumn',
+      header: () => <FormattedMessage {...messages.tagListColumnValueHeader} />,
       cell: ({ row }) => {
         const {
           value,
@@ -86,24 +179,16 @@ function getColumns({
     {
       id: 'actions',
       header: () => (
-        <div className="d-flex justify-content-end">
-          <IconButtonWithTooltip
-            tooltipPlacement="top"
-            tooltipContent={<div>{intl.formatMessage(messages.createNewTagTooltip)}</div>}
-            src={AddCircle}
-            alt={intl.formatMessage(messages.createTagButtonLabel)}
-            size="inline"
-            onClick={() => {
-              onStartDraft();
-              setDraftError('');
-              setIsCreatingTopTag(true);
-              setEditingRowId(null);
-              setActiveActionMenuRowId(null);
-            }}
-            disabled={hasOpenDraft || !canAddTag}
-            aria-describedby={hasOpenDraft ? draftInProgressHintId : undefined}
-          />
-        </div>
+        <ActionsHeader
+          onStartDraft={onStartDraft}
+          setDraftError={setDraftError}
+          setIsCreatingTopTag={setIsCreatingTopTag}
+          setEditingRowId={setEditingRowId}
+          setActiveActionMenuRowId={setActiveActionMenuRowId}
+          hasOpenDraft={hasOpenDraft}
+          draftInProgressHintId={draftInProgressHintId}
+          canAddTag={canAddTag}
+        />
       ),
       cell: ({ row }) => {
         const rowData = asTagListRowData(row);
@@ -136,33 +221,15 @@ function getColumns({
 
         return (
           <div className="d-flex align-items-center justify-content-end gap-2">
-            <Dropdown>
-              <Dropdown.Toggle
-                id={`dropdown-toggle-for-tag-${rowData.id}`}
-                as={IconButton}
-                src={MoreVert}
-                iconAs={Icon}
-                variant="primary"
-                aria-label={intl.formatMessage(messages.moreActionsForTag, { tagName: rowData.value })}
-                size="sm"
-              />
-              <Dropdown.Menu>
-                <Dropdown.Item
-                  as={Button}
-                  onClick={startSubtagDraft}
-                  disabled={reachedMaxDepth(row) || disableAddSubtag}
-                >
-                  {intl.formatMessage(messages.addSubtag)}
-                </Dropdown.Item>
-                <Dropdown.Item
-                  as={Button}
-                  onClick={editTag}
-                  disabled={disableEditTag}
-                >
-                  {intl.formatMessage(messages.renameTag)}
-                </Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown>
+            <ActionsMenu
+              rowData={rowData}
+              row={row}
+              startSubtagDraft={startSubtagDraft}
+              disableAddSubtag={disableAddSubtag}
+              editTag={editTag}
+              disableEditTag={disableEditTag}
+              reachedMaxDepth={reachedMaxDepth}
+            />
           </div>
         );
       },
